@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/lib/types";
+import type { Profile, TripSpotCategory } from "@/lib/types";
+import { TRIP_SPOT_CATEGORIES } from "@/lib/constants";
 import { cachePhotos } from "@/lib/photos";
 import { useToast } from "./Toaster";
 import PlacesAutocomplete, { type PlacePick } from "./PlacesAutocomplete";
@@ -21,6 +22,7 @@ export default function AddDestinationDialog({
   const [pick, setPick] = useState<PlacePick | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<TripSpotCategory>("other");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -37,6 +39,7 @@ export default function AddDestinationDialog({
     const payload = {
       title: title.trim(),
       description: description.trim() || null,
+      category,
       place_name: pick?.name ?? null,
       address: pick?.address ?? null,
       lat: pick?.lat ?? null,
@@ -117,6 +120,27 @@ export default function AddDestinationDialog({
               placeholder="Wie nennen wir die Idee?"
               className="w-full rounded-xl bg-white border border-ink/10 px-4 py-3 outline-none focus:border-terracotta transition"
             />
+          </Field>
+
+          <Field label="Was ist das?">
+            <div className="flex flex-wrap gap-2">
+              {TRIP_SPOT_CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setCategory(c.value)}
+                  className={
+                    "rounded-full border px-3 py-1.5 text-sm transition " +
+                    (category === c.value
+                      ? "bg-ink text-cream border-ink"
+                      : "bg-white text-ink/70 border-ink/10 hover:border-ink/30")
+                  }
+                >
+                  <span className="mr-1">{c.emoji}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
           </Field>
 
           <Field label="Warum dahin? (optional)">

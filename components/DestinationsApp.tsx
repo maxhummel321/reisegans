@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Destination, Photo, Profile } from "@/lib/types";
 import { placeholderPhoto } from "@/lib/photos";
+import { TRIP_SPOT_CATEGORIES } from "@/lib/constants";
 import { useToast } from "./Toaster";
 import AddDestinationDialog from "./AddDestinationDialog";
 import WorldMap, { type MapPoint } from "./WorldMap";
@@ -158,11 +159,22 @@ function DestinationCard({
         />
       </div>
       <div className="flex-1 min-w-0 p-4">
-        {dest.country && (
-          <span className="inline-block text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-ocean/15 text-oceanInk mb-1">
-            {dest.country}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 mb-1">
+          {(() => {
+            const cat = TRIP_SPOT_CATEGORIES.find((c) => c.value === dest.category);
+            if (!cat) return null;
+            return (
+              <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-sand text-ink/70">
+                {cat.emoji} {cat.label}
+              </span>
+            );
+          })()}
+          {dest.country && (
+            <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-ocean/15 text-oceanInk">
+              {dest.country}
+            </span>
+          )}
+        </div>
         <h3 className="serif text-xl truncate" title={dest.title}>
           {dest.title}
         </h3>

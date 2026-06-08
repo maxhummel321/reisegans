@@ -24,6 +24,8 @@ create table if not exists public.tp_destinations (
   google_place_id text,
   country text,
   country_code text,            -- ISO-3166-1 alpha-2
+  category text not null default 'other'
+    check (category in ('hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
   created_by uuid not null references public.profiles(id) on delete cascade,
   created_by_name text,
   created_at timestamptz not null default now(),
@@ -31,6 +33,8 @@ create table if not exists public.tp_destinations (
 );
 create index if not exists tp_destinations_country_idx
   on public.tp_destinations (country_code);
+create index if not exists tp_destinations_category_idx
+  on public.tp_destinations (category);
 
 -- 2) Trips --------------------------------------------------------------------
 create table if not exists public.tp_trips (
@@ -65,7 +69,7 @@ create table if not exists public.tp_trip_spots (
   title text not null,
   note text,
   category text not null default 'activity'
-    check (category in ('hotel','activity','beach','restaurant','viewpoint','transport','other')),
+    check (category in ('hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
   place_name text,
   address text,
   lat double precision,

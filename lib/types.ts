@@ -27,6 +27,7 @@ export type TripSpotCategory =
   | "restaurant"
   | "viewpoint"
   | "transport"
+  | "spa"
   | "other";
 
 export type CompanionRole = "owner" | "editor" | "viewer";
@@ -46,6 +47,7 @@ export type Destination = {
   google_place_id: string | null;
   country: string | null;
   country_code: string | null;
+  category: TripSpotCategory;
   created_by: string;
   created_by_name: string | null;
   created_at: string;

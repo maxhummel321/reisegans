@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, Pin, useMap } from "@vis.gl/react-google-maps";
+import ErrorBoundary from "./ErrorBoundary";
 
 export type MapPoint = {
   id: string;
@@ -47,45 +48,53 @@ export default function WorldMap({
 
   return (
     <div className={"rounded-3xl overflow-hidden border border-ink/10 shadow-soft " + (className ?? "")}>
-      <APIProvider apiKey={apiKey}>
-        <Map
-          mapId={mapId ?? "travel-planner-map"}
-          defaultCenter={WORLD_CENTER}
-          defaultZoom={2}
-          gestureHandling="greedy"
-          disableDefaultUI={false}
-          colorScheme="LIGHT"
-          clickableIcons={false}
-        >
-          {placed.map((p) => {
-            const isSelected = p.id === selectedId;
-            return (
-              <AdvancedMarker
-                key={p.id}
-                position={{ lat: p.lat, lng: p.lng }}
-                onClick={() => onSelect?.(p.id)}
-                title={p.title}
-                zIndex={isSelected ? 1000 : 1}
-              >
-                <div className="relative inline-block" style={{ color: "#22201b" }}>
-                  {isSelected && (
-                    <span className="pulse-ring absolute inset-0 rounded-full" aria-hidden />
-                  )}
-                  <Pin
-                    background={isSelected ? "#22201b" : p.pinColor ?? "#c8623f"}
-                    borderColor="#22201b"
-                    glyphColor={isSelected ? "#fdf8ee" : p.pinGlyph ?? "#fdf8ee"}
-                    glyph={p.glyph ?? "📍"}
-                    scale={isSelected ? 1.3 : 1}
-                  />
-                </div>
-              </AdvancedMarker>
-            );
-          })}
-          <BoundsFitter points={placed} />
-          {showRoute && <RouteLine points={placed} />}
-        </Map>
-      </APIProvider>
+      <ErrorBoundary
+        fallback={
+          <div className="grid place-items-center h-full p-6 text-center text-sm text-ink/55">
+            Karte konnte nicht geladen werden. Versuch&apos;s gleich nochmal.
+          </div>
+        }
+      >
+        <APIProvider apiKey={apiKey}>
+          <Map
+            mapId={mapId ?? "travel-planner-map"}
+            defaultCenter={WORLD_CENTER}
+            defaultZoom={2}
+            gestureHandling="greedy"
+            disableDefaultUI={false}
+            colorScheme="LIGHT"
+            clickableIcons={false}
+          >
+            {placed.map((p) => {
+              const isSelected = p.id === selectedId;
+              return (
+                <AdvancedMarker
+                  key={p.id}
+                  position={{ lat: p.lat, lng: p.lng }}
+                  onClick={() => onSelect?.(p.id)}
+                  title={p.title}
+                  zIndex={isSelected ? 1000 : 1}
+                >
+                  <div className="relative inline-block" style={{ color: "#22201b" }}>
+                    {isSelected && (
+                      <span className="pulse-ring absolute inset-0 rounded-full" aria-hidden />
+                    )}
+                    <Pin
+                      background={isSelected ? "#22201b" : p.pinColor ?? "#c8623f"}
+                      borderColor="#22201b"
+                      glyphColor={isSelected ? "#fdf8ee" : p.pinGlyph ?? "#fdf8ee"}
+                      glyph={p.glyph ?? "📍"}
+                      scale={isSelected ? 1.3 : 1}
+                    />
+                  </div>
+                </AdvancedMarker>
+              );
+            })}
+            <BoundsFitter points={placed} />
+            {showRoute && <RouteLine points={placed} />}
+          </Map>
+        </APIProvider>
+      </ErrorBoundary>
     </div>
   );
 }
@@ -97,6 +106,7 @@ function BoundsFitter({ points }: { points: MapPoint[] }) {
 
   useEffect(() => {
     if (!map) return;
+    if (typeof google === "undefined" || !google.maps) return;
     if (points.length === 0) {
       map.panTo(WORLD_CENTER);
       map.setZoom(2);
@@ -107,14 +117,18 @@ function BoundsFitter({ points }: { points: MapPoint[] }) {
       map.setZoom(9);
       return;
     }
-    const bounds = new google.maps.LatLngBounds();
-    for (const p of points) bounds.extend({ lat: p.lat, lng: p.lng });
-    map.fitBounds(bounds, 60);
-    const onIdle = google.maps.event.addListenerOnce(map, "idle", () => {
-      const z = map.getZoom() ?? 2;
-      if (z > 14) map.setZoom(14);
-    });
-    return () => google.maps.event.removeListener(onIdle);
+    try {
+      const bounds = new google.maps.LatLngBounds();
+      for (const p of points) bounds.extend({ lat: p.lat, lng: p.lng });
+      map.fitBounds(bounds, 60);
+      const onIdle = google.maps.event.addListenerOnce(map, "idle", () => {
+        const z = map.getZoom() ?? 2;
+        if (z > 14) map.setZoom(14);
+      });
+      return () => google.maps.event.removeListener(onIdle);
+    } catch (err) {
+      console.warn("BoundsFitter:", err);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, sig]);
 
@@ -134,6 +148,7 @@ function RouteLine({ points }: { points: MapPoint[] }) {
 
   useEffect(() => {
     if (!map) return;
+    if (typeof google === "undefined" || !google.maps) return;
     // Clear any previous line.
     if (lineRef.current) {
       lineRef.current.setMap(null);
@@ -141,21 +156,25 @@ function RouteLine({ points }: { points: MapPoint[] }) {
     }
     if (ordered.length < 2) return;
 
-    lineRef.current = new google.maps.Polyline({
-      path: ordered.map((p) => ({ lat: p.lat, lng: p.lng })),
-      geodesic: true,
-      strokeColor: "#c8623f",
-      strokeOpacity: 0.9,
-      strokeWeight: 3,
-      icons: [
-        {
-          icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 },
-          offset: "0",
-          repeat: "14px",
-        },
-      ],
-    });
-    lineRef.current.setMap(map);
+    try {
+      lineRef.current = new google.maps.Polyline({
+        path: ordered.map((p) => ({ lat: p.lat, lng: p.lng })),
+        geodesic: true,
+        strokeColor: "#c8623f",
+        strokeOpacity: 0.9,
+        strokeWeight: 3,
+        icons: [
+          {
+            icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 },
+            offset: "0",
+            repeat: "14px",
+          },
+        ],
+      });
+      lineRef.current.setMap(map);
+    } catch (err) {
+      console.warn("RouteLine:", err);
+    }
 
     return () => {
       if (lineRef.current) {
