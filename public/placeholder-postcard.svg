@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" fill="#e8dcc4"/>
+  <rect x="14" y="14" width="372" height="272" rx="10" fill="none" stroke="#c8623f" stroke-width="3" stroke-dasharray="10 8" opacity="0.5"/>
+  <path d="M0 210 L120 150 L210 200 L300 130 L400 185 L400 300 L0 300 Z" fill="#5d8a4c" opacity="0.45"/>
+  <path d="M0 235 L90 195 L190 235 L290 185 L400 230 L400 300 L0 300 Z" fill="#2f7e84" opacity="0.4"/>
+  <circle cx="320" cy="70" r="30" fill="#e8b13e" opacity="0.85"/>
+  <rect x="300" y="34" width="64" height="46" rx="6" fill="#fdf8ee" opacity="0.25"/>
+  <text x="200" y="160" text-anchor="middle" font-family="Georgia, serif" font-size="22" fill="#7d3a22" opacity="0.7">Postkarte folgt</text>
+</svg>
