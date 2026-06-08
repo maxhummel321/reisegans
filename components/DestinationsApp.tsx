@@ -214,12 +214,18 @@ function DetailPanel({
 }) {
   const [title, setTitle] = useState(dest.title);
   const [description, setDescription] = useState(dest.description ?? "");
+  const [website, setWebsite] = useState(dest.website ?? "");
+  const [price, setPrice] = useState(
+    dest.price_per_night != null ? String(dest.price_per_night) : "",
+  );
   const cat = TRIP_SPOT_CATEGORIES.find((c) => c.value === dest.category);
 
   // Reset form when dest changes
   if (title !== dest.title && !isEditing) {
     setTitle(dest.title);
     setDescription(dest.description ?? "");
+    setWebsite(dest.website ?? "");
+    setPrice(dest.price_per_night != null ? String(dest.price_per_night) : "");
   }
 
   return (
@@ -294,9 +300,37 @@ function DetailPanel({
                 rows={3}
                 className="w-full rounded-xl bg-white border border-ink/10 px-3 py-2 outline-none focus:border-terracotta resize-none text-sm"
               />
+              <label className="block text-xs uppercase tracking-[0.18em] text-ink/60 mb-1 mt-3">
+                Website
+              </label>
+              <input
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://…"
+                className="w-full rounded-xl bg-white border border-ink/10 px-3 py-2 outline-none focus:border-terracotta text-sm"
+              />
+              <label className="block text-xs uppercase tracking-[0.18em] text-ink/60 mb-1 mt-3">
+                Ø Preis DZ / Nacht (€)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="z. B. 280"
+                className="w-40 rounded-xl bg-white border border-ink/10 px-3 py-2 outline-none focus:border-terracotta text-sm"
+              />
               <div className="flex gap-2 mt-3">
                 <button
-                  onClick={() => onSave({ title: title.trim(), description: description.trim() || null })}
+                  onClick={() =>
+                    onSave({
+                      title: title.trim(),
+                      description: description.trim() || null,
+                      website: website.trim() || null,
+                      price_per_night: price.trim() ? parseInt(price, 10) : null,
+                    })
+                  }
                   className="tap rounded-full bg-ink text-cream px-4 py-2 text-sm font-medium hover:bg-terracotta transition"
                 >
                   Speichern
@@ -311,6 +345,23 @@ function DetailPanel({
               {dest.description && (
                 <p className="text-sm text-ink/75 mt-3 whitespace-pre-wrap">{dest.description}</p>
               )}
+              <div className="flex flex-wrap items-center gap-3 mt-3">
+                {dest.price_per_night != null && (
+                  <span className="text-sm rounded-full px-3 py-1 bg-sunshine/25 text-ink">
+                    ca. {dest.price_per_night} € / Nacht
+                  </span>
+                )}
+                {dest.website && (
+                  <a
+                    href={dest.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-ocean hover:text-oceanInk underline"
+                  >
+                    Zur Website ↗
+                  </a>
+                )}
+              </div>
               {canEdit && (
                 <div className="flex items-center gap-3 mt-4 pt-3 border-t border-ink/10">
                   <button
@@ -388,6 +439,9 @@ function DestinationCard({
         <h3 className="serif text-xl truncate" title={dest.title}>
           {dest.title}
         </h3>
+        {dest.price_per_night != null && (
+          <span className="text-xs text-ink/60">ca. {dest.price_per_night} € / Nacht</span>
+        )}
         {dest.description && (
           <p className="text-sm text-ink/65 line-clamp-2 mt-0.5">{dest.description}</p>
         )}

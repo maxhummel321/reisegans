@@ -10,6 +10,7 @@ export type PlacePick = {
   lat: number;
   lng: number;
   placeId: string;
+  website: string | null;
   photoNames: string[]; // up to a few Places API photo resource names
 };
 
@@ -172,6 +173,7 @@ export default function PlacesAutocomplete({
           "location",
           "addressComponents",
           "photos",
+          "websiteURI",
         ],
       });
       const loc = place.location;
@@ -192,6 +194,7 @@ export default function PlacesAutocomplete({
         lat: typeof loc.lat === "function" ? loc.lat() : loc.lat,
         lng: typeof loc.lng === "function" ? loc.lng() : loc.lng,
         placeId: place.id ?? s.placeId,
+        website: place.websiteURI ?? null,
         photoNames,
       });
       sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();

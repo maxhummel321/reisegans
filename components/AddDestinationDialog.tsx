@@ -23,12 +23,18 @@ export default function AddDestinationDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<TripSpotCategory>("other");
+  const [website, setWebsite] = useState("");
+  const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Hotels & spa stays get a price field by default.
+  const showPrice = category === "hotel" || category === "spa";
 
   function handlePlacePick(p: PlacePick) {
     setPick(p);
     if (!title.trim()) setTitle(p.name);
+    if (p.website && !website.trim()) setWebsite(p.website);
   }
 
   async function handleSave() {
@@ -40,6 +46,8 @@ export default function AddDestinationDialog({
       title: title.trim(),
       description: description.trim() || null,
       category,
+      website: website.trim() || null,
+      price_per_night: price.trim() ? parseInt(price, 10) : null,
       place_name: pick?.name ?? null,
       address: pick?.address ?? null,
       lat: pick?.lat ?? null,
@@ -152,6 +160,29 @@ export default function AddDestinationDialog({
               className="w-full rounded-xl bg-white border border-ink/10 px-4 py-3 outline-none focus:border-terracotta transition resize-none"
             />
           </Field>
+
+          <Field label="Website (optional)">
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://…"
+              className="w-full rounded-xl bg-white border border-ink/10 px-4 py-3 outline-none focus:border-terracotta transition"
+            />
+          </Field>
+
+          {showPrice && (
+            <Field label="Ø Preis DZ / Nacht (€, optional)">
+              <input
+                type="number"
+                min={0}
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="z. B. 280"
+                className="w-40 rounded-xl bg-white border border-ink/10 px-4 py-3 outline-none focus:border-terracotta transition"
+              />
+            </Field>
+          )}
 
           {error && <p className="text-rose text-sm mb-3">{error}</p>}
 

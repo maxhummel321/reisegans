@@ -49,6 +49,8 @@ export type Destination = {
   country: string | null;
   country_code: string | null;
   category: TripSpotCategory;
+  website: string | null;
+  price_per_night: number | null;
   created_by: string;
   created_by_name: string | null;
   created_at: string;
@@ -87,6 +89,8 @@ export type TripSpot = {
   country_code: string | null;
   sort_order: number;
   source_destination_id: string | null;
+  website: string | null;
+  price_per_night: number | null;
   created_by: string;
   created_at: string;
   updated_at: string;
