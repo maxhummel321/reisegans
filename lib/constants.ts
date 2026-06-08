@@ -25,6 +25,7 @@ export const TRIP_SPOT_CATEGORIES: {
   pinColor: string;
   pinGlyph: string;
 }[] = [
+  { value: "city", label: "Stadt", emoji: "🏙", pinColor: "#c8623f", pinGlyph: "#fdf8ee" },
   { value: "hotel", label: "Unterkunft", emoji: "🛏", pinColor: "#c8623f", pinGlyph: "#fdf8ee" },
   { value: "spa", label: "Spa & Wellness", emoji: "🧖", pinColor: "#a25e8c", pinGlyph: "#fdf8ee" },
   { value: "activity", label: "Aktivität", emoji: "✨", pinColor: "#e8b13e", pinGlyph: "#22201b" },

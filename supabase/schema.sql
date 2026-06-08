@@ -25,7 +25,7 @@ create table if not exists public.tp_destinations (
   country text,
   country_code text,            -- ISO-3166-1 alpha-2
   category text not null default 'other'
-    check (category in ('hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
+    check (category in ('city','hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
   created_by uuid not null references public.profiles(id) on delete cascade,
   created_by_name text,
   created_at timestamptz not null default now(),
@@ -69,7 +69,7 @@ create table if not exists public.tp_trip_spots (
   title text not null,
   note text,
   category text not null default 'activity'
-    check (category in ('hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
+    check (category in ('city','hotel','activity','beach','restaurant','viewpoint','transport','spa','other')),
   place_name text,
   address text,
   lat double precision,

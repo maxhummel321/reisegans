@@ -21,6 +21,7 @@ export type TripCategory =
   | "winter_ski";
 
 export type TripSpotCategory =
+  | "city"
   | "hotel"
   | "activity"
   | "beach"
