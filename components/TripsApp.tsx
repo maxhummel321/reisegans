@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Profile, Trip, TripCategory } from "@/lib/types";
 import {
   TRIP_CATEGORIES,
@@ -26,24 +26,38 @@ export default function TripsApp({
   me: Profile;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
+  const isStadt = params?.get("art") === "stadt";
   const [trips] = useState<Trip[]>(initialTrips);
   const [showAdd, setShowAdd] = useState(false);
   const [cats, setCats] = useState<Set<TripCategory>>(new Set());
   const [country, setCountry] = useState<string | null>(null);
   const [bucket, setBucket] = useState<string | null>(null);
 
+  // Split by section: Städtetrips have the "staedtetrip" category,
+  // Rundreisen are everything else.
+  const sectionTrips = useMemo(
+    () =>
+      trips.filter((t) =>
+        isStadt
+          ? (t.categories ?? []).includes("staedtetrip")
+          : !(t.categories ?? []).includes("staedtetrip"),
+      ),
+    [trips, isStadt],
+  );
+
   const countries = useMemo(() => {
     const set = new Map<string, string>();
-    for (const t of trips) {
+    for (const t of sectionTrips) {
       for (const code of t.countries ?? []) {
         set.set(code, countryNames[code] ?? code);
       }
     }
     return Array.from(set.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [trips, countryNames]);
+  }, [sectionTrips, countryNames]);
 
   const filtered = useMemo(() => {
-    return trips.filter((t) => {
+    return sectionTrips.filter((t) => {
       if (cats.size > 0 && !(t.categories ?? []).some((c) => cats.has(c as TripCategory)))
         return false;
       if (country && !(t.countries ?? []).includes(country)) return false;
@@ -53,7 +67,7 @@ export default function TripsApp({
       }
       return true;
     });
-  }, [trips, cats, country, bucket]);
+  }, [sectionTrips, cats, country, bucket]);
 
   function toggleCat(c: TripCategory) {
     setCats((prev) => {
@@ -63,6 +77,11 @@ export default function TripsApp({
     });
   }
 
+  // Category chips: hide the "staedtetrip" chip (it's the section itself).
+  const catChips = TRIP_CATEGORIES.filter((c) =>
+    isStadt ? false : c.value !== "staedtetrip",
+  );
+
   return (
     <>
       <AppHeader />
@@ -70,11 +89,15 @@ export default function TripsApp({
         <header className="flex items-center justify-between mb-5">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-terracotta font-semibold">
-              Trips
+              {isStadt ? "Städtetrips" : "Rundreisen"}
             </p>
-            <h1 className="serif text-4xl">Geplante Reisen</h1>
+            <h1 className="serif text-4xl">
+              {isStadt ? "Städte erkunden" : "Geplante Reisen"}
+            </h1>
             <p className="text-sm text-ink/60 mt-1 max-w-md">
-              Mehrere Spots zu einer Reise gebündelt — mit Karte, Route und Crew.
+              {isStadt
+                ? "Ein verlängertes Wochenende, eine Stadt, die Top-Spots."
+                : "Mehrere Stationen zu einer Reise gebündelt — mit Karte, Route und Crew."}
             </p>
           </div>
           <button
@@ -86,14 +109,16 @@ export default function TripsApp({
         </header>
 
         <div className="space-y-2 mb-5">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-            {TRIP_CATEGORIES.map((c) => (
-              <Chip key={c.value} active={cats.has(c.value)} onClick={() => toggleCat(c.value)}>
-                <span className="mr-1">{c.emoji}</span>
-                {c.label}
-              </Chip>
-            ))}
-          </div>
+          {catChips.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+              {catChips.map((c) => (
+                <Chip key={c.value} active={cats.has(c.value)} onClick={() => toggleCat(c.value)}>
+                  <span className="mr-1">{c.emoji}</span>
+                  {c.label}
+                </Chip>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
             {DURATION_BUCKETS.map((b) => (
               <Chip
@@ -128,9 +153,9 @@ export default function TripsApp({
               <button
                 key={t.id}
                 onClick={() => router.push(`/trips/${t.id}`)}
-                className="text-left bg-paper rounded-3xl border border-ink/5 shadow-soft overflow-hidden lift"
+                className="text-left bg-paper rounded-3xl border border-ink/5 shadow-soft overflow-hidden lift hover:shadow-sticker transition"
               >
-                <TripCover photos={coversByTrip[t.id] ?? []} className="h-40 w-full" />
+                <TripCover photos={coversByTrip[t.id] ?? []} className="h-44 w-full" />
                 <div className="p-4">
                   <div className="flex flex-wrap gap-1 mb-1.5">
                     {(t.categories ?? []).slice(0, 3).map((c) => {

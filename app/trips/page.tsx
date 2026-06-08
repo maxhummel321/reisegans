@@ -57,11 +57,11 @@ export default async function TripsPage() {
       }
     }
 
-    // first photo of first 4 spots per trip
+    // up to 8 cover photos per trip (first photo of each spot, in order)
     const seenPerTrip: Record<string, number> = {};
     for (const s of spotList) {
       const cover = (coversByTrip[s.trip_id] ??= []);
-      if ((seenPerTrip[s.trip_id] ?? 0) >= 4) continue;
+      if ((seenPerTrip[s.trip_id] ?? 0) >= 8) continue;
       const url = photosBySpot[s.id];
       if (url) {
         cover.push(url);

@@ -80,10 +80,11 @@ export default function TripDetail({
 
   const coverPhotos = useMemo(() => {
     const out: string[] = [];
+    // First photo of each spot, in order — gives the carousel variety.
     for (const s of spots) {
       const p = spotPhotos[s.id]?.[0]?.storage_path;
       if (p) out.push(p);
-      if (out.length >= 4) break;
+      if (out.length >= 8) break;
     }
     return out;
   }, [spots, spotPhotos]);
