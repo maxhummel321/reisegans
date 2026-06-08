@@ -2,14 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Destination, Photo, Profile } from "@/lib/types";
+import type { Destination, Photo, Profile, TripSpotCategory } from "@/lib/types";
 import { placeholderPhoto } from "@/lib/photos";
 import { TRIP_SPOT_CATEGORIES } from "@/lib/constants";
 import { useToast } from "./Toaster";
 import AddDestinationDialog from "./AddDestinationDialog";
 import WorldMap, { type MapPoint } from "./WorldMap";
 import Mascot from "./Mascot";
-
 import AppHeader from "./AppHeader";
 
 export default function DestinationsApp({
@@ -25,24 +24,31 @@ export default function DestinationsApp({
   const { toast } = useToast();
   const [items, setItems] = useState<Destination[]>(initialDestinations);
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [country, setCountry] = useState<string | null>(null);
+  const [catFilter, setCatFilter] = useState<TripSpotCategory | null>(null);
 
   const countries = useMemo(() => {
-    const set = new Map<string, string>(); // code -> name
+    const set = new Map<string, string>();
     for (const d of items) {
       if (d.country_code) set.set(d.country_code, d.country ?? d.country_code);
     }
     return Array.from(set.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [items]);
 
-  const filtered = useMemo(
-    () => (country ? items.filter((d) => d.country_code === country) : items),
-    [items, country],
-  );
+  const filtered = useMemo(() => {
+    let list = items;
+    if (country) list = list.filter((d) => d.country_code === country);
+    if (catFilter) list = list.filter((d) => d.category === catFilter);
+    return list;
+  }, [items, country, catFilter]);
 
   const mapPoints: MapPoint[] = filtered
     .filter((d) => d.lat != null && d.lng != null)
     .map((d) => ({ id: d.id, lat: d.lat!, lng: d.lng!, title: d.title }));
+
+  const selected = selectedId ? items.find((d) => d.id === selectedId) ?? null : null;
 
   async function refetch() {
     const { data } = await supabase
@@ -53,14 +59,26 @@ export default function DestinationsApp({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Reiseidee löschen?")) return;
+    if (!confirm("Reiseidee loschen?")) return;
     const prev = items;
     setItems((p) => p.filter((d) => d.id !== id));
+    setSelectedId(null);
     const { error } = await supabase.from("tp_destinations").delete().eq("id", id);
     if (error) {
       setItems(prev);
       toast(error.message, "error");
     }
+  }
+
+  async function handleUpdate(id: string, fields: Partial<Destination>) {
+    const { error } = await supabase.from("tp_destinations").update(fields).eq("id", id);
+    if (error) {
+      toast(error.message, "error");
+      return;
+    }
+    setItems((prev) => prev.map((d) => (d.id === id ? { ...d, ...fields } : d)));
+    setEditId(null);
+    toast("Gespeichert.");
   }
 
   return (
@@ -74,8 +92,7 @@ export default function DestinationsApp({
             </p>
             <h1 className="serif text-4xl">Einzelne Ideen</h1>
             <p className="text-sm text-ink/60 mt-1 max-w-md">
-              Hier kommt alles rein, das nicht (noch nicht) Teil eines Trips ist —
-              ein Hotel, ein Geheimtipp, eine Stadt.
+              Hier kommt alles rein, das nicht (noch nicht) Teil eines Trips ist.
             </p>
           </div>
           <button
@@ -86,71 +103,268 @@ export default function DestinationsApp({
           </button>
         </header>
 
-      {countries.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 -mx-1 px-1">
-          <Chip active={country === null} onClick={() => setCountry(null)}>
+        {/* Category filter */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-3 -mx-1 px-1">
+          <Chip active={catFilter === null} onClick={() => setCatFilter(null)}>
             Alle
           </Chip>
-          {countries.map(([code, name]) => (
-            <Chip key={code} active={country === code} onClick={() => setCountry(code)}>
-              {name}
+          {TRIP_SPOT_CATEGORIES.map((c) => (
+            <Chip key={c.value} active={catFilter === c.value} onClick={() => setCatFilter((v) => (v === c.value ? null : c.value))}>
+              <span className="mr-1">{c.emoji}</span>
+              {c.label}
             </Chip>
           ))}
         </div>
-      )}
 
-      {mapPoints.length > 0 && (
-        <div className="h-64 mb-6">
-          <WorldMap points={mapPoints} className="w-full h-full" mapId="destinations-map" />
-        </div>
-      )}
+        {/* Country filter */}
+        {countries.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 -mx-1 px-1">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-ink/55 shrink-0">Land</span>
+            <Chip active={country === null} onClick={() => setCountry(null)}>
+              Alle
+            </Chip>
+            {countries.map(([code, name]) => (
+              <Chip key={code} active={country === code} onClick={() => setCountry((v) => (v === code ? null : code))}>
+                {name}
+              </Chip>
+            ))}
+          </div>
+        )}
 
-      {filtered.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {filtered.map((d) => (
-            <DestinationCard
-              key={d.id}
-              dest={d}
-              photo={photosByOwner[d.id]?.[0]?.storage_path ?? null}
-              canEdit={d.created_by === me.id}
-              onDelete={() => handleDelete(d.id)}
+        {/* Map */}
+        {mapPoints.length > 0 && (
+          <div className="h-64 mb-6">
+            <WorldMap
+              points={mapPoints}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              className="w-full h-full"
+              mapId="destinations-map"
             />
-          ))}
-        </div>
-      )}
+          </div>
+        )}
 
-      {showAdd && (
-        <AddDestinationDialog
-          me={me}
-          onClose={() => setShowAdd(false)}
-          onCreated={() => {
-            setShowAdd(false);
-            refetch();
-          }}
-        />
-      )}
+        {/* List */}
+        {filtered.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {filtered.map((d) => (
+              <DestinationCard
+                key={d.id}
+                dest={d}
+                photo={photosByOwner[d.id]?.[0]?.storage_path ?? null}
+                selected={d.id === selectedId}
+                onClick={() => setSelectedId(d.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Detail panel */}
+        {selected && (
+          <DetailPanel
+            dest={selected}
+            photos={(photosByOwner[selected.id] ?? []).map((p) => p.storage_path)}
+            canEdit={selected.created_by === me.id}
+            isEditing={editId === selected.id}
+            onEdit={() => setEditId(selected.id)}
+            onSave={(fields) => handleUpdate(selected.id, fields)}
+            onCancelEdit={() => setEditId(null)}
+            onDelete={() => handleDelete(selected.id)}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+
+        {showAdd && (
+          <AddDestinationDialog
+            me={me}
+            onClose={() => setShowAdd(false)}
+            onCreated={() => {
+              setShowAdd(false);
+              refetch();
+            }}
+          />
+        )}
       </main>
     </>
+  );
+}
+
+function DetailPanel({
+  dest,
+  photos,
+  canEdit,
+  isEditing,
+  onEdit,
+  onSave,
+  onCancelEdit,
+  onDelete,
+  onClose,
+}: {
+  dest: Destination;
+  photos: string[];
+  canEdit: boolean;
+  isEditing: boolean;
+  onEdit: () => void;
+  onSave: (fields: Partial<Destination>) => void;
+  onCancelEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(dest.title);
+  const [description, setDescription] = useState(dest.description ?? "");
+  const cat = TRIP_SPOT_CATEGORIES.find((c) => c.value === dest.category);
+
+  // Reset form when dest changes
+  if (title !== dest.title && !isEditing) {
+    setTitle(dest.title);
+    setDescription(dest.description ?? "");
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div
+        role="dialog"
+        aria-modal
+        className="relative w-full sm:max-w-lg bg-paper rounded-t-3xl sm:rounded-3xl shadow-sticker max-h-[85vh] overflow-y-auto float-in"
+      >
+        {/* Photo(s) */}
+        {photos.length > 0 ? (
+          <div className="w-full aspect-[16/9] overflow-hidden rounded-t-3xl sm:rounded-t-3xl bg-sand">
+            <img
+              src={photos[0]}
+              alt=""
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <div className="w-full aspect-[16/9] bg-sand grid place-items-center rounded-t-3xl">
+            <Mascot size={80} className="text-ink bob" />
+          </div>
+        )}
+
+        <div className="px-6 py-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                {cat && (
+                  <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-sand text-ink/70">
+                    {cat.emoji} {cat.label}
+                  </span>
+                )}
+                {dest.country && (
+                  <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-ocean/15 text-oceanInk">
+                    {dest.country}
+                  </span>
+                )}
+              </div>
+              {isEditing ? (
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full serif text-2xl bg-white border border-ink/10 rounded-xl px-3 py-1 outline-none focus:border-terracotta"
+                />
+              ) : (
+                <h2 className="serif text-2xl">{dest.title}</h2>
+              )}
+              {dest.address && !isEditing && (
+                <p className="text-sm text-ink/55 mt-1">{dest.address}</p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-full w-9 h-9 grid place-items-center hover:bg-ink/5 shrink-0"
+              aria-label="Schliessen"
+            >
+              ✕
+            </button>
+          </div>
+
+          {isEditing ? (
+            <div className="mt-4">
+              <label className="block text-xs uppercase tracking-[0.18em] text-ink/60 mb-1">
+                Beschreibung
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl bg-white border border-ink/10 px-3 py-2 outline-none focus:border-terracotta resize-none text-sm"
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={() => onSave({ title: title.trim(), description: description.trim() || null })}
+                  className="tap rounded-full bg-ink text-cream px-4 py-2 text-sm font-medium hover:bg-terracotta transition"
+                >
+                  Speichern
+                </button>
+                <button onClick={onCancelEdit} className="text-sm text-ink/55 hover:text-ink">
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {dest.description && (
+                <p className="text-sm text-ink/75 mt-3 whitespace-pre-wrap">{dest.description}</p>
+              )}
+              {canEdit && (
+                <div className="flex items-center gap-3 mt-4 pt-3 border-t border-ink/10">
+                  <button
+                    onClick={onEdit}
+                    className="text-sm text-ink/60 hover:text-ink underline"
+                  >
+                    Bearbeiten
+                  </button>
+                  <button
+                    onClick={onDelete}
+                    className="text-sm text-rose/70 hover:text-rose"
+                  >
+                    Loschen
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          <p className="text-[11px] text-ink/40 mt-4">
+            Hinzugefugt von {dest.created_by_name ?? "Unbekannt"} am{" "}
+            {new Date(dest.created_at).toLocaleDateString("de-DE", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
 function DestinationCard({
   dest,
   photo,
-  canEdit,
-  onDelete,
+  selected,
+  onClick,
 }: {
   dest: Destination;
   photo: string | null;
-  canEdit: boolean;
-  onDelete: () => void;
+  selected: boolean;
+  onClick: () => void;
 }) {
+  const cat = TRIP_SPOT_CATEGORIES.find((c) => c.value === dest.category);
   return (
-    <article className="bg-paper rounded-3xl border border-ink/5 shadow-soft overflow-hidden lift flex">
+    <button
+      onClick={onClick}
+      className={
+        "text-left bg-paper rounded-3xl border shadow-soft overflow-hidden lift flex w-full " +
+        (selected ? "border-ink" : "border-ink/5")
+      }
+    >
       <div className="w-28 h-28 shrink-0 bg-sand">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photo ?? placeholderPhoto()}
           alt=""
@@ -160,15 +374,11 @@ function DestinationCard({
       </div>
       <div className="flex-1 min-w-0 p-4">
         <div className="flex items-center gap-1.5 mb-1">
-          {(() => {
-            const cat = TRIP_SPOT_CATEGORIES.find((c) => c.value === dest.category);
-            if (!cat) return null;
-            return (
-              <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-sand text-ink/70">
-                {cat.emoji} {cat.label}
-              </span>
-            );
-          })()}
+          {cat && (
+            <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-sand text-ink/70">
+              {cat.emoji} {cat.label}
+            </span>
+          )}
           {dest.country && (
             <span className="text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 bg-ocean/15 text-oceanInk">
               {dest.country}
@@ -181,16 +391,8 @@ function DestinationCard({
         {dest.description && (
           <p className="text-sm text-ink/65 line-clamp-2 mt-0.5">{dest.description}</p>
         )}
-        {canEdit && (
-          <button
-            onClick={onDelete}
-            className="text-[11px] text-rose/80 hover:text-rose mt-1"
-          >
-            Löschen
-          </button>
-        )}
       </div>
-    </article>
+    </button>
   );
 }
 
