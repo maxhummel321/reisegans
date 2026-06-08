@@ -27,7 +27,8 @@ alter table public.tp_trips enable row level security;
 
 drop policy if exists tp_trips_read on public.tp_trips;
 create policy tp_trips_read on public.tp_trips
-  for select to authenticated using (public.tp_is_companion(id));
+  for select to authenticated
+  using (auth.uid() = created_by or public.tp_is_companion(id));
 
 drop policy if exists tp_trips_insert on public.tp_trips;
 create policy tp_trips_insert on public.tp_trips

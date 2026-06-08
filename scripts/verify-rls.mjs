@@ -60,14 +60,22 @@ function check(label, ok) {
 }
 
 async function asUser(email) {
-  const { data, error } = await admin.auth.signInWithPassword({ email, password });
-  if (error) throw new Error(`sign-in for ${email}: ${error.message}`);
-  return createClient(URL_, ANON, {
+  // Use a throwaway anon client for sign-in so we don't pollute the admin
+  // client's session — admin.auth.signInWithPassword(...) would replace the
+  // service-role auth context with the user's JWT and break later admin reads.
+  const tmp = createClient(URL_, ANON, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      headers: { Authorization: `Bearer ${data.session.access_token}` },
-    },
   });
+  const { data, error } = await tmp.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(`sign-in for ${email}: ${error.message}`);
+  const client = createClient(URL_, ANON, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  await client.auth.setSession({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+  });
+  return client;
 }
 
 async function setupUsers() {

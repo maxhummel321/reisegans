@@ -78,6 +78,11 @@ as $$
 $$;
 
 -- On trip insert, add the creator as owner companion (so RLS edit checks pass).
+-- IMPORTANT: even though this function is SECURITY DEFINER, the inner INSERT
+-- still runs against the calling role's RLS policies. The tp_comp_write
+-- policy requires tp_can_edit_trip(trip_id) which would be false (no
+-- companion row exists yet), creating a chicken-and-egg deadlock. We
+-- bypass row-level security inside this function only.
 create or replace function public.tp_add_owner_companion()
 returns trigger
 language plpgsql
@@ -85,9 +90,9 @@ security definer
 set search_path = public
 as $$
 begin
+  perform set_config('row_security', 'off', true);
   insert into public.tp_trip_companions (trip_id, user_id, role, added_by)
-  values (new.id, new.created_by, 'owner', new.created_by)
-  on conflict do nothing;
+  values (new.id, new.created_by, 'owner', new.created_by);
   return new;
 end;
 $$;
