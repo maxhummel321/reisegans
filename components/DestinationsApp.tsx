@@ -9,6 +9,8 @@ import AddDestinationDialog from "./AddDestinationDialog";
 import WorldMap, { type MapPoint } from "./WorldMap";
 import Mascot from "./Mascot";
 
+import AppHeader from "./AppHeader";
+
 export default function DestinationsApp({
   initialDestinations,
   photosByOwner,
@@ -61,21 +63,27 @@ export default function DestinationsApp({
   }
 
   return (
-    <main className="min-h-svh max-w-5xl mx-auto px-4 sm:px-6 py-6">
-      <header className="flex items-center justify-between mb-5">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-terracotta font-semibold">
-            Wishlist
-          </p>
-          <h1 className="serif text-4xl">Reiseideen</h1>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="tap rounded-full bg-ink text-cream px-4 py-2.5 text-sm font-medium hover:bg-terracotta transition"
-        >
-          + Idee
-        </button>
-      </header>
+    <>
+      <AppHeader />
+      <main className="min-h-svh max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <header className="flex items-center justify-between mb-5">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-terracotta font-semibold">
+              Wishlist
+            </p>
+            <h1 className="serif text-4xl">Einzelne Ideen</h1>
+            <p className="text-sm text-ink/60 mt-1 max-w-md">
+              Hier kommt alles rein, das nicht (noch nicht) Teil eines Trips ist —
+              ein Hotel, ein Geheimtipp, eine Stadt.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="tap rounded-full bg-ink text-cream px-4 py-2.5 text-sm font-medium hover:bg-terracotta transition shrink-0"
+          >
+            + Idee
+          </button>
+        </header>
 
       {countries.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 -mx-1 px-1">
@@ -122,7 +130,8 @@ export default function DestinationsApp({
           }}
         />
       )}
-    </main>
+      </main>
+    </>
   );
 }
 
